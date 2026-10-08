@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <title>ติดตามน้ำท่วม</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4A2E18">
+
+  <!-- ไอคอนแอป: เบราว์เซอร์และมือถืออ่านจากหน้านี้ได้โดยตรง -->
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="manifest" href="manifest.webmanifest">
+
+  <!-- ชื่อใต้ไอคอนและโหมดเต็มจอ -->
+  <meta name="apple-mobile-web-app-title" content="ติดตามน้ำท่วม">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <style>
+    html, body { margin: 0; height: 100%; background: #FAF7F2; font-family: sans-serif; }
+    iframe { border: 0; width: 100%; height: 100vh; height: 100dvh; display: block; }
+    #hint { display: none; padding: 24px; color: #4A2E18; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <iframe id="app" allow="geolocation *; camera *; fullscreen *" title="ระบบติดตามสถานการณ์น้ำท่วม"></iframe>
+  <div id="hint">ยังไม่ได้ตั้งค่าลิงก์ระบบ — เปิดไฟล์ index.html แล้วแก้ค่า <b>APP_URL</b> เป็นลิงก์ Web App (ลงท้ายด้วย /exec)</div>
+
+  <script>
+    // วางลิงก์ Web App ของ Apps Script (ที่ลงท้ายด้วย /exec) ตรงนี้
+    var APP_URL = 'https://script.google.com/macros/s/AKfycbz9sidm_BlIvRshh2lCBrwNXc9HT2-ZTbJWV-CavCkOdh3VHaQ9jBnyLuuiE_JUqzpdDw/exec';
+
+    var frame = document.getElementById('app');
+    if (/^https:\/\/script\.google\.com\/.+\/exec/.test(APP_URL)) {
+      frame.src = APP_URL + (location.search || '');   // ส่งต่อพารามิเตอร์ท้ายลิงก์ (ถ้ามี)
+    } else {
+      frame.style.display = 'none';
+      document.getElementById('hint').style.display = 'block';
+    }
+  </script>
+</body>
+</html>
