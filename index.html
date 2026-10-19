@@ -53,7 +53,7 @@
     #scard img { width: 124px; height: 124px; border-radius: 29px; object-fit: cover; display: block; }
     .s-rise { opacity: 0; transform: translateY(20px); animation: sRise .6s cubic-bezier(.2,.8,.2,1) forwards; }
     .s-t1 { font-size: 19px; font-weight: 500; color: rgba(255,255,255,.92); line-height: 1.2; animation-delay: .55s; }
-    .s-t2 { font-size: 48px; font-weight: 700; line-height: 1.2; margin-top: 4px; animation-delay: .7s; color: #fff;
+    .s-t2 { font-size: 48px; font-weight: 700; line-height: 1.2; padding: .3em .1em .12em; margin-top: calc(4px - .3em); margin-bottom: -.12em; animation-delay: .7s; color: #fff;
       background-image: linear-gradient(100deg, rgba(174,227,255,0) 38%, rgba(150,220,255,.95) 50%, rgba(174,227,255,0) 62%), linear-gradient(#fff, #fff);
       background-size: 260% 100%, 100% 100%; background-repeat: no-repeat; background-position: 120% 0, 0 0;
       -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
@@ -62,6 +62,9 @@
     .s-row i { display: block; width: 28px; height: 1px; background: linear-gradient(90deg, rgba(125,211,252,0), rgba(125,211,252,.67)); }
     .s-row i:last-child { transform: scaleX(-1); }
     .s-row span { margin: 0 12px; }
+    #sskip { position: absolute; left: 0; right: 0; top: calc(14px + env(safe-area-inset-top, 0px)); text-align: center; font-size: 12.5px; font-weight: 500;
+      color: rgba(191,227,255,.75); opacity: 0; transition: opacity .4s ease; pointer-events: none; }
+    #sskip.show { opacity: 1; }
     #sbottom { position: absolute; left: 0; right: 0; bottom: calc(34px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: center; }
     #sstatus { font-size: 13.5px; font-weight: 500; color: #7DD3FC; min-height: 20px; transition: opacity .2s ease, transform .25s ease; }
     #sstatus.swap { opacity: 0; transform: translateY(-4px); }
@@ -78,6 +81,7 @@
 
   <div id="splash" aria-hidden="true">
     <canvas id="sc"></canvas>
+    <div id="sskip">แตะที่หน้าจอเพื่อข้าม</div>
     <div id="sui">
       <div id="scenter">
         <div id="scard"><img src="logo.webp" alt="" width="124" height="124"></div>
@@ -97,12 +101,14 @@
     var APP_URL = 'https://script.google.com/macros/s/AKfycbz9sidm_BlIvRshh2lCBrwNXc9HT2-ZTbJWV-CavCkOdh3VHaQ9jBnyLuuiE_JUqzpdDw/exec';
 
     var frame = document.getElementById('app');
-    var appLoaded = false;
+    var appLoaded = false;   // หน้าเว็บของ Apps Script โหลดแล้ว
+    var appReady = false;    // แอปโหลดข้อมูลจากเซิร์ฟเวอร์เสร็จแล้ว (แอปส่งสัญญาณ flood-ready มาให้)
     frame.addEventListener('load', function () { appLoaded = true; });
+    window.addEventListener('message', function (e) { if (e && e.data && e.data.type === 'flood-ready') appReady = true; });
     if (/^https:\/\/script\.google\.com\/.+\/exec/.test(APP_URL)) {
       frame.src = APP_URL + (location.search || '');   // ส่งต่อพารามิเตอร์ท้ายลิงก์ (ถ้ามี) — เริ่มโหลดแอปทันทีระหว่างที่ Splash เล่นอยู่
     } else {
-      appLoaded = true;
+      appLoaded = true; appReady = true;
     }
   </script>
 
@@ -114,7 +120,7 @@
     try { if (sessionStorage.getItem('floodSplashSeen') === '1') { finish(); return; } } catch (e) {}
     var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    var TOTAL = 3.6, MAX_WAIT = 9;
+    var TOTAL = 3.6, MAX_WAIT = 8;   // รอข้อมูลสูงสุด 8 วินาที แล้วเปิดหน้าเว็บต่อให้เอง (ไม่ว่าข้อมูลจะมาหรือไม่)
     var cv = document.getElementById('sc'), c = cv.getContext('2d');
     var W = 0, H = 0, SW = 0, OX = 0, DPR = 1;
     var CYAN = '#22D3EE', SKY = '#60A5FA', ICE = '#E0F2FE';
@@ -221,6 +227,9 @@
     }
 
     var t0 = 0, raf = 0, leaving = false, started = false;
+    // แตะเพื่อข้ามได้ (หลังผ่านไป 1.5 วินาที) กันกรณีเครือข่ายช้า
+    var skipEl = document.getElementById('sskip');
+    splash.addEventListener('click', function () { if (t0 && (performance.now() - t0) > 1500) leave(); });
     function leave() {
       if (leaving) return; leaving = true;
       try { sessionStorage.setItem('floodSplashSeen', '1'); } catch (e) {}
@@ -232,10 +241,12 @@
       var t = (now - t0) / 1000;
       draw(t);
       if (!leaving) {
+        if (t > 1.5 && skipEl) skipEl.classList.add('show');
         if (t > .7) setStatus('กำลังเตรียมระบบ…');
         if (t > 1.5) setStatus('กำลังเชื่อมต่อเซิร์ฟเวอร์…');
-        if (appLoaded && t > 2.7) setStatus('พร้อมใช้งาน ✓');
-        if ((appLoaded && t >= TOTAL) || t > MAX_WAIT) leave();
+        if (appReady && t > 2.7) setStatus('พร้อมใช้งาน ✓');
+        else if (t > 3.6) setStatus('กำลังโหลดข้อมูลล่าสุด…');
+        if ((appReady && t >= TOTAL) || t > MAX_WAIT) leave();
       }
       raf = requestAnimationFrame(loop);
     }
@@ -247,7 +258,7 @@
     window.addEventListener('resize', function () { if (!leaving) layout(); });
     window.addEventListener('orientationchange', function () { setTimeout(layout, 200); });
 
-    if (reduce) { var chk = setInterval(function () { if (appLoaded) { clearInterval(chk); leave(); } }, 100); setTimeout(leave, 4000); return; }
+    if (reduce) { var chk = setInterval(function () { if (appReady) { clearInterval(chk); leave(); } }, 100); setTimeout(leave, 8000); return; }
     // รอฟอนต์ให้พร้อมก่อนเริ่ม (สูงสุด 1.2 วินาที)
     var go = function () { requestAnimationFrame(start); };
     if (document.fonts && document.fonts.load) {
