@@ -26,22 +26,237 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
+  <link rel="preload" href="fonts/plex_medium.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="fonts/plex_bold.ttf" as="font" type="font/ttf" crossorigin>
+
   <style>
-    html, body { margin: 0; height: 100%; background: #FAF7F2; font-family: sans-serif; }
-    iframe { border: 0; width: 100%; height: 100vh; height: 100dvh; display: block; }
+    @font-face { font-family: 'PlexThai'; font-weight: 400; src: url(fonts/plex_regular.ttf) format('truetype'); font-display: swap; }
+    @font-face { font-family: 'PlexThai'; font-weight: 500; src: url(fonts/plex_medium.ttf) format('truetype'); font-display: swap; }
+    @font-face { font-family: 'PlexThai'; font-weight: 700; src: url(fonts/plex_bold.ttf) format('truetype'); font-display: swap; }
+
+    html, body { margin: 0; height: 100%; background: #040A18; font-family: sans-serif; }
+    iframe { border: 0; width: 100%; height: 100vh; height: 100dvh; display: block; background: #FAF7F2; }
+
+    /* ===== หน้าเปิดแอป (Splash) น้ำท่วม ===== */
+    #splash {
+      position: fixed; inset: 0; z-index: 9999; overflow: hidden; background: #040A18;
+      font-family: 'PlexThai', 'IBM Plex Sans Thai', 'Noto Sans Thai', sans-serif; color: #fff; text-align: center;
+      transition: opacity .55s ease;
+    }
+    #splash.out { opacity: 0; pointer-events: none; }
+    #sc { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+    #sui { position: absolute; left: 50%; top: 0; bottom: 0; width: 100%; max-width: 480px; transform: translateX(-50%); }
+    #scenter { position: absolute; left: 0; right: 0; top: 0; bottom: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    #scard { width: 132px; height: 132px; border-radius: 34px; box-sizing: border-box; margin-bottom: 62px;
+      background: linear-gradient(135deg, rgba(255,255,255,.25), rgba(255,255,255,.07)); border: 1px solid rgba(255,255,255,.4);
+      display: flex; align-items: center; justify-content: center; opacity: 0; animation: sFade .5s ease .1s forwards; }
+    #scard img { width: 124px; height: 124px; border-radius: 29px; object-fit: cover; display: block; }
+    .s-rise { opacity: 0; transform: translateY(20px); animation: sRise .6s cubic-bezier(.2,.8,.2,1) forwards; }
+    .s-t1 { font-size: 19px; font-weight: 500; color: rgba(255,255,255,.92); line-height: 1.2; animation-delay: .55s; }
+    .s-t2 { font-size: 48px; font-weight: 700; line-height: 1.2; margin-top: 4px; animation-delay: .7s; color: #fff;
+      background-image: linear-gradient(100deg, rgba(174,227,255,0) 38%, rgba(150,220,255,.95) 50%, rgba(174,227,255,0) 62%), linear-gradient(#fff, #fff);
+      background-size: 260% 100%, 100% 100%; background-repeat: no-repeat; background-position: 120% 0, 0 0;
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .s-t2.shine { animation: sRise .6s cubic-bezier(.2,.8,.2,1) .7s forwards, sShine 1.8s ease-in-out 1.3s 1 forwards; }
+    .s-row { display: flex; align-items: center; margin-top: 10px; font-size: 14px; font-weight: 500; color: rgba(191,227,255,.8); animation-delay: .9s; }
+    .s-row i { display: block; width: 28px; height: 1px; background: linear-gradient(90deg, rgba(125,211,252,0), rgba(125,211,252,.67)); }
+    .s-row i:last-child { transform: scaleX(-1); }
+    .s-row span { margin: 0 12px; }
+    #sbottom { position: absolute; left: 0; right: 0; bottom: calc(34px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: center; }
+    #sstatus { font-size: 13.5px; font-weight: 500; color: #7DD3FC; min-height: 20px; transition: opacity .2s ease, transform .25s ease; }
+    #sstatus.swap { opacity: 0; transform: translateY(-4px); }
+    #spill { margin-top: 14px; font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.9); padding: 9px 18px; border-radius: 22px;
+      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.25); animation-delay: 1.1s; }
+    @keyframes sFade { to { opacity: 1; } }
+    @keyframes sRise { to { opacity: 1; transform: none; } }
+    @keyframes sShine { from { background-position: 120% 0, 0 0; } to { background-position: -20% 0, 0 0; } }
+    @media (prefers-reduced-motion: reduce) { #splash { transition-duration: .01s; } }
   </style>
 </head>
 <body>
   <iframe id="app" allow="geolocation *; camera *; fullscreen *" title="ระบบติดตามสถานการณ์น้ำท่วม"></iframe>
+
+  <div id="splash" aria-hidden="true">
+    <canvas id="sc"></canvas>
+    <div id="sui">
+      <div id="scenter">
+        <div id="scard"><img src="logo.webp" alt="" width="124" height="124"></div>
+        <div class="s-rise s-t1">ระบบติดตามสถานการณ์</div>
+        <div class="s-rise s-t2 shine">น้ำท่วม</div>
+        <div class="s-rise s-row"><i></i><span>ตำรวจภูธรภาค ๒</span><i></i></div>
+      </div>
+      <div id="sbottom">
+        <div id="sstatus"></div>
+        <div id="spill" class="s-rise">พัฒนาโดย Mosstech</div>
+      </div>
+    </div>
+  </div>
 
   <script>
     // วางลิงก์ Web App ของ Apps Script (ที่ลงท้ายด้วย /exec) ตรงนี้
     var APP_URL = 'https://script.google.com/macros/s/AKfycbz9sidm_BlIvRshh2lCBrwNXc9HT2-ZTbJWV-CavCkOdh3VHaQ9jBnyLuuiE_JUqzpdDw/exec';
 
     var frame = document.getElementById('app');
+    var appLoaded = false;
+    frame.addEventListener('load', function () { appLoaded = true; });
     if (/^https:\/\/script\.google\.com\/.+\/exec/.test(APP_URL)) {
-      frame.src = APP_URL + (location.search || '');   // ส่งต่อพารามิเตอร์ท้ายลิงก์ (ถ้ามี)
+      frame.src = APP_URL + (location.search || '');   // ส่งต่อพารามิเตอร์ท้ายลิงก์ (ถ้ามี) — เริ่มโหลดแอปทันทีระหว่างที่ Splash เล่นอยู่
+    } else {
+      appLoaded = true;
     }
+  </script>
+
+  <script>
+  /* ===== Splash: ภาพน้ำท่วมค่อยๆ สูงขึ้น (พอร์ตจากแอป .apk) ===== */
+  (function () {
+    var splash = document.getElementById('splash');
+    function finish() { if (splash && splash.parentNode) splash.parentNode.removeChild(splash); }
+    try { if (sessionStorage.getItem('floodSplashSeen') === '1') { finish(); return; } } catch (e) {}
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var TOTAL = 3.6, MAX_WAIT = 9;
+    var cv = document.getElementById('sc'), c = cv.getContext('2d');
+    var W = 0, H = 0, SW = 0, OX = 0, DPR = 1;
+    var CYAN = '#22D3EE', SKY = '#60A5FA', ICE = '#E0F2FE';
+    var FINAL = 0.40, GROUND = 0.80, SLANT = 0.25, RING_START = 0.7, RING_DUR = 2.2;
+    var HX = [.08,.22,.37,.53,.67,.82], S = 1.35, HW = [40,52,36,58,44,50], HH = [30,38,26,42,32,36], HR = [16,20,15,22,17,19];
+    var TX = [.15,.29,.45,.74], TR = [15,13,16,14], TH = [52,46,56,48];
+    function rnd(seed) { var s = seed; return function () { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; }; }
+    var r = rnd(11), RN = 64, PN = 10, rx = [], rv = [], rl = [], rp = [], ra = [], px = [], pf = [], pph = [], poff = [], psz = [], i;
+    for (i = 0; i < RN; i++) { rx.push(r()); rv.push(.85 + r() * .75); rl.push(9 + r() * 15); rp.push(r()); ra.push(.16 + r() * .26); }
+    for (i = 0; i < PN; i++) { px.push(.04 + r() * .92); pf.push(.7 + r() * .7); pph.push(r()); poff.push(14 + r() * 70); psz.push(.6 + r() * .7); }
+    function cl(x) { return Math.max(0, Math.min(1, x)); }
+    function eo(x) { var p = 1 - cl(x); return 1 - p * p * p; }
+    function eio(x) { x = cl(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
+    function rgba(hex, a) { var n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + cl(a) + ')'; }
+    function mixc(a, b, f) { f = cl(f); var A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
+      function m(s) { return Math.round((A >> s & 255) + ((B >> s & 255) - (A >> s & 255)) * f); } return 'rgb(' + m(16) + ',' + m(8) + ',' + m(0) + ')'; }
+    function blob(x, y, R, col, a) { if (a <= .004) return; var g = c.createRadialGradient(x, y, 0, x, y, R); g.addColorStop(0, rgba(col, a)); g.addColorStop(1, rgba(col, 0)); c.fillStyle = g; c.beginPath(); c.arc(x, y, R, 0, 7); c.fill(); }
+    function level(t) { var p = cl((t - .35) / 2.9), sm = p * p * (3 - 2 * p); return FINAL * (.5 * p + .5 * sm) + .004 * Math.sin(t * 3.1) * p; }
+    function water(base, ph, amp, freq, tc, ta, bc, ba, foam) {
+      var st = 12; c.beginPath(); c.moveTo(-st, H + 12);
+      for (var x = -st; x <= W + st; x += st) c.lineTo(x, base + amp * Math.sin(freq * 2 * Math.PI * (x - OX) / SW + ph));
+      c.lineTo(W + st, H + 12); c.closePath();
+      var g = c.createLinearGradient(0, base - amp, 0, H); g.addColorStop(0, rgba(tc, ta)); g.addColorStop(1, rgba(bc, ba)); c.fillStyle = g; c.fill();
+      if (foam) { c.lineWidth = 2; c.strokeStyle = rgba(ICE, .55); c.stroke(); c.lineWidth = 5; c.strokeStyle = rgba(CYAN, .12); c.stroke(); }
+    }
+    var cardCX = 0, cardCY = 0;
+    function layout() {
+      W = window.innerWidth; H = window.innerHeight; DPR = Math.min(window.devicePixelRatio || 1, 2);
+      SW = Math.min(W, 480); OX = (W - SW) / 2;
+      cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+      c.setTransform(DPR, 0, 0, DPR, 0, 0);
+      var b = document.getElementById('scard').getBoundingClientRect();
+      cardCX = b.left + b.width / 2; cardCY = b.top + b.height / 2;
+    }
+    function draw(t) {
+      var intro = eo(t / .9), lvl = Math.max(level(t), 0), wtop = H * (1 - lvl), gy = H * GROUND, i, k, cx;
+      var g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#040A18'); g.addColorStop(.55, '#0A1F3D'); g.addColorStop(1, '#0F3558'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+      // เมฆฝน
+      for (i = 0; i < 4; i++) { cx = OX + SW * (.1 + .28 * i) + Math.sin(t * .35 + i * 1.7) * 22; var cy = H * (.045 + .03 * (i % 2)); blob(cx, cy, SW * .62, '#01040C', .85 * intro); blob(cx + 14, cy + 34, SW * .42, '#1D3F70', .3 * intro); }
+      if (W > SW) { blob(OX * .5, H * .05, OX + 120, '#01040C', .7 * intro); blob(W - OX * .5, H * .05, OX + 120, '#01040C', .7 * intro); }
+      // ฟ้าแลบ
+      var a = 0, tfs = [.95, 2.05];
+      for (i = 0; i < tfs.length; i++) { var dt = t - tfs[i]; if (dt > 0 && dt < .4) { var kk = 1 - dt / .4; a = Math.max(a, kk * kk * (.55 + .45 * Math.abs(Math.sin(dt * 42)))); } }
+      if (a > .01) { blob(OX + SW * .72, H * .1, SW * 1.1, '#BFDBFE', .3 * a); c.fillStyle = rgba('#DBEAFE', .06 * a); c.fillRect(0, 0, W, H); }
+      // เนินเขา
+      c.beginPath(); c.moveTo(0, gy);
+      for (var x = 0; x <= W + 12; x += 12) c.lineTo(x, gy - 62 - 20 * Math.sin((x - OX) / SW * 5.2 + .8) - 9 * Math.sin((x - OX) / SW * 11));
+      c.lineTo(W + 12, gy); c.closePath(); c.fillStyle = '#0B1D38'; c.fill();
+      c.save(); c.translate(0, (1 - intro) * 26);
+      for (i = 0; i < 4; i++) { cx = OX + SW * TX[i]; c.fillStyle = '#0A1B33'; var th = TH[i] * S, tr = TR[i] * S; c.fillRect(cx - 2.5, gy - th * .6, 5, th * .6); c.fillStyle = '#0C2342';
+        var bs = [[0, th - tr * .2, tr], [-tr * .6, th * .72, tr * .75], [tr * .6, th * .72, tr * .75]];
+        for (k = 0; k < 3; k++) { c.beginPath(); c.arc(cx + bs[k][0], gy - bs[k][1], bs[k][2], 0, 7); c.fill(); } }
+      for (i = 0; i < 6; i++) { cx = OX + SW * HX[i]; var hw = HW[i] * S, hh = HH[i] * S, hr = HR[i] * S; c.fillStyle = '#0A1A33'; c.fillRect(cx - hw / 2, gy - hh, hw, hh);
+        c.beginPath(); c.moveTo(cx - hw / 2 - 5, gy - hh); c.lineTo(cx, gy - hh - hr); c.lineTo(cx + hw / 2 + 5, gy - hh); c.closePath(); c.fillStyle = '#14305A'; c.fill();
+        var wins = HW[i] >= 44 ? 2 : 1;
+        for (k = 0; k < wins; k++) { var wx = wins == 2 ? cx + (k == 0 ? -hw * .22 : hw * .22) : cx, wy = gy - hh * .62;
+          var lit = cl((wtop - wy) / 14); lit *= intro * (.86 + .14 * Math.sin(t * 7 + i * 2 + k));
+          if (lit > .01) { blob(wx, wy + 5, 22, '#FFC857', .34 * lit); c.fillStyle = rgba('#FFC857', lit); } else c.fillStyle = '#0F2447';
+          c.fillRect(wx - 4.5, wy, 9, 10); } }
+      c.fillStyle = '#060F1E'; c.fillRect(0, gy, W, H - gy); c.restore();
+      // ฝน
+      var inn = cl(t / .5); c.lineCap = 'round';
+      for (i = 0; i < RN; i++) { var f = (t * rv[i] + rp[i]) % 1, y = f * H * 1.08 - .04 * H; if (y > wtop - 2) continue; var x2 = rx[i] * (W + .3 * H) - y * SLANT;
+        c.lineWidth = ra[i] > .3 ? 1.5 : 1; c.strokeStyle = rgba('#BFE3FF', ra[i] * inn); c.beginPath(); c.moveTo(x2, y); c.lineTo(x2 + SLANT * rl[i], y - rl[i]); c.stroke(); }
+      // น้ำ
+      if (lvl > .002) {
+        water(wtop - 5, t * .9 + 1.3, 7, 1.4, '#38BDF8', .42, '#0369A1', .55, false);
+        water(wtop, t * 1.3, 6, 2, '#0EA5E9', .78, '#063A6B', .96, true);
+        water(wtop + 9, -t * 1.1 + .6, 5, 1.2, '#0369A1', .9, '#03203F', 1, false);
+        var vis = cl(lvl / .02);
+        for (i = 0; i < PN; i++) { var ff = (t * pf[i] / 1.1 + pph[i]) % 1, rad = 5 + ff * 30 * psz[i], al = .5 * (1 - ff) * (1 - ff) * vis; c.lineWidth = 1.2; c.strokeStyle = rgba(ICE, al); c.beginPath(); c.ellipse(px[i] * W, wtop + poff[i], rad, rad * .28, 0, 0, 7); c.stroke(); }
+      }
+      // เกจวัดระดับน้ำ
+      (function () {
+        var gx = OX + SW - 18, top = H * .50, bot = H * GROUND, my = Math.max(top, Math.min(bot, wtop)), lv = cl(lvl / FINAL);
+        var col = lv < .6 ? mixc('#22D3EE', '#FBBF24', lv / .6) : mixc('#FBBF24', '#EF4444', (lv - .6) / .4);
+        c.lineWidth = 1.5; c.strokeStyle = rgba('#FFFFFF', .35 * intro); c.beginPath(); c.moveTo(gx, top); c.lineTo(gx, bot); c.stroke();
+        for (var q = 0; q <= 16; q++) { var yy = bot - (bot - top) * q / 16, len = q % 4 == 0 ? 9 : 5; c.beginPath(); c.moveTo(gx - len, yy); c.lineTo(gx, yy); c.stroke(); }
+        c.lineWidth = 3.5; c.globalAlpha = .85 * intro; c.strokeStyle = col; c.beginPath(); c.moveTo(gx, my); c.lineTo(gx, bot); c.stroke(); c.globalAlpha = 1;
+        c.fillStyle = col; c.globalAlpha = intro; c.beginPath(); c.moveTo(gx - 22, my - 5); c.lineTo(gx - 22, my + 5); c.lineTo(gx - 12, my); c.closePath(); c.fill(); c.globalAlpha = 1;
+      })();
+      // วงแหวนรอบโลโก้
+      var rr = 66 + 24;
+      blob(cardCX, cardCY, rr * 2.1, CYAN, .34 * (.85 + .15 * Math.sin(t * 2.2)) * intro);
+      for (k = 0; k < 2; k++) { var fk = (t * .55 + k * .5) % 1; c.lineWidth = 1.5; c.strokeStyle = rgba(CYAN, .3 * (1 - fk) * (1 - fk) * intro); c.beginPath(); c.arc(cardCX, cardCY, rr + fk * 120, 0, 7); c.stroke(); }
+      var p = eio((t - RING_START) / RING_DUR); c.lineWidth = 3; c.strokeStyle = rgba('#FFFFFF', .15 * intro); c.beginPath(); c.arc(cardCX, cardCY, rr, 0, 7); c.stroke();
+      if (p > .001) {
+        var sg = c.createConicGradient ? c.createConicGradient(-Math.PI / 2, cardCX, cardCY) : null;
+        if (sg) { sg.addColorStop(0, CYAN); sg.addColorStop(.45, SKY); sg.addColorStop(.8, ICE); sg.addColorStop(1, CYAN); c.strokeStyle = sg; } else c.strokeStyle = CYAN;
+        c.lineWidth = 9; c.globalAlpha = .22; c.beginPath(); c.arc(cardCX, cardCY, rr, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * p); c.stroke(); c.globalAlpha = 1;
+        c.lineWidth = 3.2; c.beginPath(); c.arc(cardCX, cardCY, rr, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * p); c.stroke();
+        if (p < .999) { var an = -Math.PI / 2 + 2 * Math.PI * p, hx = cardCX + rr * Math.cos(an), hy = cardCY + rr * Math.sin(an);
+          c.fillStyle = 'rgba(255,255,255,.28)'; c.beginPath(); c.arc(hx, hy, 11, 0, 7); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(hx, hy, 4.2, 0, 7); c.fill(); }
+      }
+    }
+
+    /* ข้อความสถานะ */
+    var st = document.getElementById('sstatus'), stNow = '';
+    function setStatus(s) {
+      if (s === stNow) return; stNow = s;
+      if (!st.textContent) { st.textContent = s; return; }
+      st.classList.add('swap');
+      setTimeout(function () { st.textContent = s; st.classList.remove('swap'); }, 160);
+    }
+
+    var t0 = 0, raf = 0, leaving = false, started = false;
+    function leave() {
+      if (leaving) return; leaving = true;
+      try { sessionStorage.setItem('floodSplashSeen', '1'); } catch (e) {}
+      splash.classList.add('out');
+      setTimeout(function () { cancelAnimationFrame(raf); finish(); }, 650);
+    }
+    function loop(now) {
+      if (!t0) t0 = now;
+      var t = (now - t0) / 1000;
+      draw(t);
+      if (!leaving) {
+        if (t > .7) setStatus('กำลังเตรียมระบบ…');
+        if (t > 1.5) setStatus('กำลังเชื่อมต่อเซิร์ฟเวอร์…');
+        if (appLoaded && t > 2.7) setStatus('พร้อมใช้งาน ✓');
+        if ((appLoaded && t >= TOTAL) || t > MAX_WAIT) leave();
+      }
+      raf = requestAnimationFrame(loop);
+    }
+    function start() {
+      if (started) return; started = true;
+      layout();
+      raf = requestAnimationFrame(loop);
+    }
+    window.addEventListener('resize', function () { if (!leaving) layout(); });
+    window.addEventListener('orientationchange', function () { setTimeout(layout, 200); });
+
+    if (reduce) { var chk = setInterval(function () { if (appLoaded) { clearInterval(chk); leave(); } }, 100); setTimeout(leave, 4000); return; }
+    // รอฟอนต์ให้พร้อมก่อนเริ่ม (สูงสุด 1.2 วินาที)
+    var go = function () { requestAnimationFrame(start); };
+    if (document.fonts && document.fonts.load) {
+      Promise.race([
+        Promise.all([document.fonts.load('700 20px PlexThai'), document.fonts.load('500 20px PlexThai'), document.fonts.load('400 20px PlexThai')]),
+        new Promise(function (res) { setTimeout(res, 1200); })
+      ]).then(go, go);
+    } else go();
+  })();
   </script>
 </body>
 </html>
