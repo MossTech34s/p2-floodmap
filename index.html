@@ -101,13 +101,21 @@
     var APP_URL = 'https://script.google.com/macros/s/AKfycbz9sidm_BlIvRshh2lCBrwNXc9HT2-ZTbJWV-CavCkOdh3VHaQ9jBnyLuuiE_JUqzpdDw/exec';
 
     var frame = document.getElementById('app');
+    var APP_OK = /^https:\/\/script\.google\.com\/.+\/exec/.test(APP_URL);
+    // ถ้าแสดงแอปในกรอบหน้านี้ไม่สำเร็จ (เช่น เบราว์เซอร์บล็อกคุกกี้ของบุคคลที่สาม) จะเปิดแอปแบบเต็มหน้าแทน และจำไว้ในเครื่องนี้
+    function openDirect() {
+      try { localStorage.setItem('floodOpenDirect', '1'); } catch (e) {}
+      location.replace(APP_URL + (location.search || ''));
+    }
+    var preferDirect = false;
+    try { preferDirect = localStorage.getItem('floodOpenDirect') === '1'; } catch (e) {}
     var appLoaded = false;   // หน้าเว็บของ Apps Script โหลดแล้ว
     var appReady = false;    // แอปโหลดข้อมูลจากเซิร์ฟเวอร์เสร็จแล้ว (แอปส่งสัญญาณ flood-ready มาให้)
     frame.addEventListener('load', function () { appLoaded = true; });
     window.addEventListener('message', function (e) { if (e && e.data && e.data.type === 'flood-ready') appReady = true; });
-    if (/^https:\/\/script\.google\.com\/.+\/exec/.test(APP_URL)) {
+    if (APP_OK && !preferDirect) {
       frame.src = APP_URL + (location.search || '');   // ส่งต่อพารามิเตอร์ท้ายลิงก์ (ถ้ามี) — เริ่มโหลดแอปทันทีระหว่างที่ Splash เล่นอยู่
-    } else {
+    } else if (!APP_OK) {
       appLoaded = true; appReady = true;
     }
   </script>
@@ -117,10 +125,18 @@
   (function () {
     var splash = document.getElementById('splash');
     function finish() { if (splash && splash.parentNode) splash.parentNode.removeChild(splash); }
-    try { if (sessionStorage.getItem('floodSplashSeen') === '1') { finish(); return; } } catch (e) {}
+    try { if (/[?&]iframe=1/.test(location.search)) localStorage.removeItem('floodOpenDirect'); } catch (e) {}
+    try {
+      if (sessionStorage.getItem('floodSplashSeen') === '1') {
+        finish();
+        if (APP_OK && preferDirect) location.replace(APP_URL + (location.search || ''));
+        else if (APP_OK) setTimeout(function () { if (!appReady) openDirect(); }, 9000);
+        return;
+      }
+    } catch (e) {}
     var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    var TOTAL = 3.6, MAX_WAIT = 8;   // รอข้อมูลสูงสุด 8 วินาที แล้วเปิดหน้าเว็บต่อให้เอง (ไม่ว่าข้อมูลจะมาหรือไม่)
+    var TOTAL = 3.6, MAX_WAIT = 9;   // ถ้าไม่ได้รับสัญญาณว่าแอปพร้อมภายใน 9 วินาที จะเปิดแอปแบบเต็มหน้าแทน
     var cv = document.getElementById('sc'), c = cv.getContext('2d');
     var W = 0, H = 0, SW = 0, OX = 0, DPR = 1;
     var CYAN = '#22D3EE', SKY = '#60A5FA', ICE = '#E0F2FE';
@@ -246,7 +262,9 @@
         if (t > 1.5) setStatus('กำลังเชื่อมต่อเซิร์ฟเวอร์…');
         if (appReady && t > 2.7) setStatus('พร้อมใช้งาน ✓');
         else if (t > 3.6) setStatus('กำลังโหลดข้อมูลล่าสุด…');
-        if ((appReady && t >= TOTAL) || t > MAX_WAIT) leave();
+        if (preferDirect && APP_OK) { if (t >= TOTAL) { leaving = true; location.replace(APP_URL + (location.search || '')); } }
+        else if (appReady && t >= TOTAL) leave();
+        else if (t > MAX_WAIT) { if (APP_OK) { leaving = true; openDirect(); } else leave(); }
       }
       raf = requestAnimationFrame(loop);
     }
@@ -258,7 +276,7 @@
     window.addEventListener('resize', function () { if (!leaving) layout(); });
     window.addEventListener('orientationchange', function () { setTimeout(layout, 200); });
 
-    if (reduce) { var chk = setInterval(function () { if (appReady) { clearInterval(chk); leave(); } }, 100); setTimeout(leave, 8000); return; }
+    if (reduce) { var chk = setInterval(function () { if (appReady) { clearInterval(chk); leave(); } }, 100); setTimeout(function () { if (APP_OK && !appReady) openDirect(); else leave(); }, 9000); return; }
     // รอฟอนต์ให้พร้อมก่อนเริ่ม (สูงสุด 1.2 วินาที)
     var go = function () { requestAnimationFrame(start); };
     if (document.fonts && document.fonts.load) {
